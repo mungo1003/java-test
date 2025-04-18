@@ -8,6 +8,7 @@ import org.mockito.Mockito;
 import quickfix.*;
 import quickfix.field.*;
 import quickfix.fix44.*;
+import quickfix.StringField;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +35,7 @@ public class ASXFIXMarketDataTest {
         
         try (var sessionMock = mockStatic(Session.class)) {
             sessionMock.when(() -> Session.lookupSession(sessionID)).thenReturn(session);
-            sessionMock.when(() -> Session.sendToTarget(any(Message.class), eq(sessionID))).thenReturn(true);
+            sessionMock.when(() -> Session.sendToTarget(any(quickfix.Message.class), eq(sessionID))).thenReturn(true);
         }
     }
     
@@ -86,14 +87,14 @@ public class ASXFIXMarketDataTest {
         bidGroup.set(new MDEntryType('0')); // Bid
         bidGroup.set(new MDEntryPx(100.5));
         bidGroup.set(new MDEntrySize(10));
-        bidGroup.set(new MDEntryID("BID1"));
+        bidGroup.setString(MDEntryID.FIELD, "BID1");
         snapshot.addGroup(bidGroup);
         
         MarketDataSnapshotFullRefresh.NoMDEntries offerGroup = new MarketDataSnapshotFullRefresh.NoMDEntries();
         offerGroup.set(new MDEntryType('1')); // Offer
         offerGroup.set(new MDEntryPx(101.0));
         offerGroup.set(new MDEntrySize(5));
-        offerGroup.set(new MDEntryID("OFFER1"));
+        offerGroup.setString(MDEntryID.FIELD, "OFFER1");
         snapshot.addGroup(offerGroup);
         
         application.fromApp(snapshot, sessionID);
@@ -112,7 +113,7 @@ public class ASXFIXMarketDataTest {
         tradeGroup.set(new MDEntryType('2')); // Trade
         tradeGroup.set(new MDEntryPx(100.75));
         tradeGroup.set(new MDEntrySize(7));
-        tradeGroup.set(new MDEntryID("TRADE1"));
+        tradeGroup.setString(MDEntryID.FIELD, "TRADE1");
         refresh.addGroup(tradeGroup);
         
         application.fromApp(refresh, sessionID);
@@ -135,7 +136,7 @@ public class ASXFIXMarketDataTest {
         bidGroup.set(new MDEntryType('0')); // Bid
         bidGroup.set(new MDEntryPx(100.5));
         bidGroup.set(new MDEntrySize(10));
-        bidGroup.set(new MDEntryID("BID1"));
+        bidGroup.setString(MDEntryID.FIELD, "BID1");
         snapshot.addGroup(bidGroup);
         
         handler.onMarketDataSnapshotFullRefresh(snapshot, sessionID);
@@ -158,7 +159,7 @@ public class ASXFIXMarketDataTest {
         updateGroup.set(new MDEntryType('0')); // Bid
         updateGroup.set(new MDEntryPx(101.0));
         updateGroup.set(new MDEntrySize(15));
-        updateGroup.set(new MDEntryID("BID1"));
+        updateGroup.setString(MDEntryID.FIELD, "BID1");
         refresh.addGroup(updateGroup);
         
         handler.onMarketDataIncrementalRefresh(refresh, sessionID);
@@ -194,7 +195,9 @@ public class ASXFIXMarketDataTest {
         
         SessionSettings settings = mock(SessionSettings.class);
         when(settings.getDefaultProperties()).thenReturn(new java.util.Properties());
-        when(settings.getSessionIDs()).thenReturn(java.util.Collections.singletonList(sessionID));
+        java.util.ArrayList<SessionID> sessionIDs = new java.util.ArrayList<>();
+        sessionIDs.add(sessionID);
+        when(settings.getSessionIDs()).thenReturn(sessionIDs);
         when(settings.getSessionProperties(sessionID)).thenReturn(new java.util.Properties());
         
         Initiator initiator = mock(Initiator.class);
@@ -206,14 +209,14 @@ public class ASXFIXMarketDataTest {
             ASXFIXClient client = new ASXFIXClient("config/quickfix.cfg", handler);
             
             try (var sessionMock = mockStatic(Session.class)) {
-                ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
+                ArgumentCaptor<quickfix.Message> messageCaptor = ArgumentCaptor.forClass(quickfix.Message.class);
                 sessionMock.when(() -> Session.sendToTarget(messageCaptor.capture(), eq(sessionID))).thenReturn(true);
                 
                 String[] symbols = {"APT", "BHP"};
                 char[] entryTypes = {'0', '1', '2'}; // Bid, Offer, Trade
                 String mdReqId = client.sendMarketDataRequest(symbols, entryTypes, 1);
                 
-                Message sentMessage = messageCaptor.getValue();
+                quickfix.Message sentMessage = messageCaptor.getValue();
                 assertTrue(sentMessage instanceof MarketDataRequest);
                 
                 MarketDataRequest request = (MarketDataRequest) sentMessage;
