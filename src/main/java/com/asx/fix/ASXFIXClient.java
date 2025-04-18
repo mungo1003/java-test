@@ -16,7 +16,7 @@ public class ASXFIXClient {
     
     private final Initiator initiator;
     private final SessionID sessionID;
-    private final MessageFactory messageFactory = new DefaultMessageFactory();
+    private final quickfix.MessageFactory messageFactory = new quickfix.DefaultMessageFactory();
     
     public ASXFIXClient(String configFile, MessageHandler messageHandler) throws ConfigError {
         SessionSettings settings = new SessionSettings(configFile);

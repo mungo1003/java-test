@@ -35,7 +35,7 @@ public class ASXFIXApplication implements Application {
     }
 
     @Override
-    public void toAdmin(Message message, SessionID sessionId) {
+    public void toAdmin(quickfix.Message message, SessionID sessionId) {
         try {
             if (message instanceof Logon) {
                 Logon logon = (Logon) message;
@@ -55,7 +55,7 @@ public class ASXFIXApplication implements Application {
     }
 
     @Override
-    public void fromAdmin(Message message, SessionID sessionId) throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon {
+    public void fromAdmin(quickfix.Message message, SessionID sessionId) throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon {
         try {
             LOGGER.info("Received admin message: {}", message);
             
@@ -78,12 +78,12 @@ public class ASXFIXApplication implements Application {
     }
 
     @Override
-    public void toApp(Message message, SessionID sessionId) throws DoNotSend {
+    public void toApp(quickfix.Message message, SessionID sessionId) throws DoNotSend {
         LOGGER.info("Sending application message: {}", message);
     }
 
     @Override
-    public void fromApp(Message message, SessionID sessionId) throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
+    public void fromApp(quickfix.Message message, SessionID sessionId) throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
         try {
             LOGGER.info("Received application message: {}", message);
             
@@ -93,8 +93,8 @@ public class ASXFIXApplication implements Application {
                 messageHandler.onMarketDataIncrementalRefresh((MarketDataIncrementalRefresh) message, sessionId);
             } else if (message instanceof MarketDataRequestReject) {
                 messageHandler.onMarketDataRequestReject((MarketDataRequestReject) message, sessionId);
-            } else if (message instanceof SecurityStatus) {
-                messageHandler.onSecurityStatus((SecurityStatus) message, sessionId);
+            } else if (message instanceof quickfix.fix44.SecurityStatus) {
+                messageHandler.onSecurityStatus((quickfix.fix44.SecurityStatus) message, sessionId);
             } else if (message instanceof TradingSessionStatus) {
                 messageHandler.onTradingSessionStatus((TradingSessionStatus) message, sessionId);
             } else if (message instanceof News) {

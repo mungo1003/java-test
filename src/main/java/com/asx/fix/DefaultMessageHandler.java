@@ -209,7 +209,7 @@ public class DefaultMessageHandler implements MessageHandler {
     }
     
     @Override
-    public void onSecurityStatus(SecurityStatus message, SessionID sessionId) {
+    public void onSecurityStatus(quickfix.fix44.SecurityStatus message, SessionID sessionId) {
         LOGGER.info("Received SecurityStatus: {}", message);
     }
     

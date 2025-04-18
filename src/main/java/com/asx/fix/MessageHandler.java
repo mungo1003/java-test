@@ -20,7 +20,7 @@ public interface MessageHandler {
     void onMarketDataIncrementalRefresh(MarketDataIncrementalRefresh message, SessionID sessionId);
     void onMarketDataRequestReject(MarketDataRequestReject message, SessionID sessionId);
     
-    void onSecurityStatus(SecurityStatus message, SessionID sessionId);
+    void onSecurityStatus(quickfix.fix44.SecurityStatus message, SessionID sessionId);
     void onTradingSessionStatus(TradingSessionStatus message, SessionID sessionId);
     void onNews(News message, SessionID sessionId);
 }
