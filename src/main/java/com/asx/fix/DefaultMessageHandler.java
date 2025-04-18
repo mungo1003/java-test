@@ -114,8 +114,9 @@ public class DefaultMessageHandler implements MessageHandler {
                 }
                 
                 String entryId = "";
-                if (group.isSetMDEntryID()) {
-                    entryId = group.getMDEntryID().getValue();
+                try {
+                    entryId = group.getString(MDEntryID.FIELD);
+                } catch (FieldNotFound e) {
                 }
                 
                 MarketDataEntry entry = new MarketDataEntry(entryType, price, size, entryId);
@@ -155,8 +156,9 @@ public class DefaultMessageHandler implements MessageHandler {
                     }
                     
                     String entryId = "";
-                    if (group.isSetMDEntryID()) {
-                        entryId = group.getMDEntryID().getValue();
+                    try {
+                        entryId = group.getString(MDEntryID.FIELD);
+                    } catch (FieldNotFound e) {
                     }
                     
                     MarketDataEntry entry = new MarketDataEntry(entryType, price, size, entryId);
@@ -168,9 +170,26 @@ public class DefaultMessageHandler implements MessageHandler {
                 } else if (updateAction == '1') { // Change
                     MarketDataEntry existingEntry = symbolData.get(entryType);
                     if (existingEntry != null) {
-                        double price = group.isSetMDEntryPx() ? group.getMDEntryPx().getValue() : existingEntry.getPrice();
-                        double size = group.isSetMDEntrySize() ? group.getMDEntrySize().getValue() : existingEntry.getSize();
-                        String entryId = group.isSetMDEntryID() ? group.getMDEntryID().getValue() : existingEntry.getEntryId();
+                        double price;
+                        try {
+                            price = group.getMDEntryPx().getValue();
+                        } catch (FieldNotFound e) {
+                            price = existingEntry.getPrice();
+                        }
+                        
+                        double size;
+                        try {
+                            size = group.getMDEntrySize().getValue();
+                        } catch (FieldNotFound e) {
+                            size = existingEntry.getSize();
+                        }
+                        
+                        String entryId;
+                        try {
+                            entryId = group.getString(MDEntryID.FIELD);
+                        } catch (FieldNotFound e) {
+                            entryId = existingEntry.getEntryId();
+                        }
                         
                         MarketDataEntry updatedEntry = new MarketDataEntry(entryType, price, size, entryId);
                         symbolData.put(entryType, updatedEntry);
