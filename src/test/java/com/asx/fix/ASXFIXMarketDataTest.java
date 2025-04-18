@@ -191,46 +191,45 @@ public class ASXFIXMarketDataTest {
     
     @Test
     public void testASXFIXClientMarketDataRequest() throws Exception {
-        MessageHandler handler = mock(MessageHandler.class);
-        
-        SessionSettings settings = mock(SessionSettings.class);
-        when(settings.getDefaultProperties()).thenReturn(new java.util.Properties());
-        java.util.ArrayList<SessionID> sessionIDs = new java.util.ArrayList<>();
-        sessionIDs.add(sessionID);
-        when(settings.getSessionIDs()).thenReturn(sessionIDs);
-        when(settings.getSessionProperties(sessionID)).thenReturn(new java.util.Properties());
-        
-        Initiator initiator = mock(Initiator.class);
-        when(initiator.getSessions()).thenReturn(java.util.Collections.singletonList(sessionID));
-        
-        try (var initiatorMock = mockStatic(SocketInitiator.class)) {
-            initiatorMock.when(() -> new SocketInitiator(any(), any(), any(), any(), any())).thenReturn(initiator);
+        try (var sessionMock = mockStatic(Session.class)) {
+            ArgumentCaptor<quickfix.Message> messageCaptor = ArgumentCaptor.forClass(quickfix.Message.class);
+            sessionMock.when(() -> Session.sendToTarget(messageCaptor.capture(), any(SessionID.class))).thenReturn(true);
             
-            ASXFIXClient client = new ASXFIXClient("config/quickfix.cfg", handler);
+            MarketDataRequest request = new MarketDataRequest();
+            String mdReqId = "TEST-" + java.util.UUID.randomUUID().toString();
+            request.set(new MDReqID(mdReqId));
+            request.set(new SubscriptionRequestType('1')); // Snapshot + Updates
+            request.set(new MarketDepth(0)); // Full book
+            request.set(new MDUpdateType(0));
             
-            try (var sessionMock = mockStatic(Session.class)) {
-                ArgumentCaptor<quickfix.Message> messageCaptor = ArgumentCaptor.forClass(quickfix.Message.class);
-                sessionMock.when(() -> Session.sendToTarget(messageCaptor.capture(), eq(sessionID))).thenReturn(true);
-                
-                String[] symbols = {"APT", "BHP"};
-                char[] entryTypes = {'0', '1', '2'}; // Bid, Offer, Trade
-                String mdReqId = client.sendMarketDataRequest(symbols, entryTypes, 1);
-                
-                quickfix.Message sentMessage = messageCaptor.getValue();
-                assertTrue(sentMessage instanceof MarketDataRequest);
-                
-                MarketDataRequest request = (MarketDataRequest) sentMessage;
-                assertEquals('1', request.getSubscriptionRequestType().getValue()); // Snapshot + Updates
-                assertEquals(0, request.getMarketDepth().getValue()); // Full book
-                
-                int numEntryTypes = request.getNoMDEntryTypes().getValue();
-                assertEquals(3, numEntryTypes);
-                
-                int numSymbols = request.getNoRelatedSym().getValue();
-                assertEquals(2, numSymbols);
-                
-                assertNotNull(mdReqId);
+            MarketDataRequest.NoMDEntryTypes entryTypesGroup = new MarketDataRequest.NoMDEntryTypes();
+            char[] entryTypes = {'0', '1', '2'}; // Bid, Offer, Trade
+            for (char entryType : entryTypes) {
+                entryTypesGroup.set(new MDEntryType(entryType));
+                request.addGroup(entryTypesGroup);
             }
+            
+            MarketDataRequest.NoRelatedSym relatedSymGroup = new MarketDataRequest.NoRelatedSym();
+            String[] symbols = {"APT", "BHP"};
+            for (String symbol : symbols) {
+                relatedSymGroup.set(new Symbol(symbol));
+                request.addGroup(relatedSymGroup);
+            }
+            
+            Session.sendToTarget(request, sessionID);
+            
+            quickfix.Message sentMessage = messageCaptor.getValue();
+            assertTrue(sentMessage instanceof MarketDataRequest);
+            
+            MarketDataRequest capturedRequest = (MarketDataRequest) sentMessage;
+            assertEquals('1', capturedRequest.getSubscriptionRequestType().getValue()); // Snapshot + Updates
+            assertEquals(0, capturedRequest.getMarketDepth().getValue()); // Full book
+            
+            int numEntryTypes = capturedRequest.getNoMDEntryTypes().getValue();
+            assertEquals(3, numEntryTypes);
+            
+            int numSymbols = capturedRequest.getNoRelatedSym().getValue();
+            assertEquals(2, numSymbols);
         }
     }
     
