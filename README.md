@@ -1,46 +1,74 @@
-# Market Data VWAP Prototype
+# ASX FIX Market Data Engine
 
-This Java application simulates market depth updates for multiple instruments across multiple market venues and calculates the Volume-Weighted Average Price (VWAP) in real-time.
+This project implements a FIX engine for ASX Market Data using QuickFIX/J. It provides functionality for session-level messages, market data subscription, and market data snapshot and delta handling according to the ASX FIX Market Data Specification.
 
 ## Features
 
-- Subscribes to market depth updates for multiple instruments across multiple venues
-- Calculates VWAP two-way prices (bid and ask) for each instrument in real-time
-- Displays VWAP prices whenever a market depth tick is received
-- Configurable number of instruments and venues
-
-## Building the Application
-
-The application uses Maven for building and dependency management:
-
-```bash
-mvn clean package
-```
-
-## Running the Application
-
-Run the application with default settings (3 instruments, 2 venues):
-
-```bash
-java -cp target/market-data-vwap-1.0-SNAPSHOT.jar com.marketdata.MarketDataApp
-```
-
-Or specify the number of instruments and venues:
-
-```bash
-java -cp target/market-data-vwap-1.0-SNAPSHOT.jar com.marketdata.MarketDataApp 5 3
-```
-
-This would run the application with 5 instruments and 3 venues.
+- Session-level message handling (Logon, Heartbeat, TestRequest, etc.)
+- Market data subscription
+- Market data snapshot and incremental refresh handling
+- Trade replay functionality
+- Comprehensive test suite
 
 ## Project Structure
 
-- `model`: Contains data models for market depth and price levels
-- `service`: Contains the market data manager and VWAP calculator
-- `simulation`: Contains the market venue simulator for testing
+- `ASXFIXApplication`: Main FIX application class that handles session-level messages and market data
+- `ASXFIXClient`: Client implementation for ASX FIX Market Data
+- `ASXFIXMarketDataApp`: Main application class with high-level API
+- `DefaultMessageHandler`: Default implementation of the MessageHandler interface
+- `MarketDataEntry`: Represents a market data entry with type, price, size, and ID
+- `MarketDataListener`: Interface for listening to market data updates
 
-## Implementation Details
+## Configuration
 
-- The application uses a publisher-subscriber pattern for market data updates
-- VWAP is calculated by summing (price * quantity) for all price levels and dividing by the total quantity
-- The simulator generates random market depth updates at configurable intervals
+The FIX engine is configured using the `quickfix.cfg` file in the `config` directory. You can customize this file to match your environment.
+
+## Usage
+
+```java
+// Create the application
+ASXFIXMarketDataApp app = new ASXFIXMarketDataApp("config/quickfix.cfg");
+
+// Start the application
+app.start();
+
+// Add a market data listener
+app.addMarketDataListener(new MarketDataListener() {
+    @Override
+    public void onMarketDataUpdate(String symbol, MarketDataEntry entry) {
+        System.out.println("Market data update for " + symbol + ": " + entry);
+    }
+    
+    @Override
+    public void onMarketDataDelete(String symbol, char entryType) {
+        System.out.println("Market data delete for " + symbol + ", entry type: " + entryType);
+    }
+    
+    @Override
+    public void onMarketDataRequestReject(String mdReqId, MarketDataRequestReject message) {
+        System.out.println("Market data request rejected: " + mdReqId);
+    }
+});
+
+// Subscribe to market data
+String[] symbols = {"APT", "BHP"};
+char[] entryTypes = {'0', '1', '2'}; // Bid, Offer, Trade
+String mdReqId = app.subscribeMarketData(symbols, entryTypes);
+
+// Get market data snapshot
+app.getMarketDataSnapshot(symbols, entryTypes);
+
+// Cancel subscription
+app.cancelMarketDataSubscription(mdReqId);
+
+// Stop the application
+app.stop();
+```
+
+## Testing
+
+The project includes comprehensive tests for the FIX engine implementation. Run the tests using Maven:
+
+```
+mvn test
+```
