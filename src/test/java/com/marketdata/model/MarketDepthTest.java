@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 
@@ -87,7 +88,11 @@ public class MarketDepthTest {
         depth.updateBid(100.0, 10.0);
         depth.updateBid(101.0, 5.0);
         
-        assertEquals(2, depth.getBidLevels().size());
+        List<PriceLevel> levels = depth.getBidLevels();
+        assertEquals(2, levels.size());
+        
+        assertEquals(101.0, levels.get(0).getPrice(), 0.001);
+        assertEquals(100.0, levels.get(1).getPrice(), 0.001);
     }
     
     @Test
@@ -96,6 +101,33 @@ public class MarketDepthTest {
         depth.updateAsk(100.0, 10.0);
         depth.updateAsk(101.0, 5.0);
         
-        assertEquals(2, depth.getAskLevels().size());
+        List<PriceLevel> levels = depth.getAskLevels();
+        assertEquals(2, levels.size());
+        
+        assertEquals(100.0, levels.get(0).getPrice(), 0.001);
+        assertEquals(101.0, levels.get(1).getPrice(), 0.001);
+    }
+    
+    @Test
+    public void testPerformanceWithMultipleUpdates() {
+        MarketDepth depth = new MarketDepth("AAPL", "VENUE-1");
+        
+        for (int i = 0; i < 1000; i++) {
+            double price = 100.0 + (i * 0.01);
+            depth.updateBid(price, i + 1);
+        }
+        
+        for (int i = 0; i < 1000; i++) {
+            double price = 100.0 + (i * 0.01);
+            depth.updateBid(price, i + 2);
+        }
+        
+        for (int i = 0; i < 500; i++) {
+            double price = 100.0 + (i * 0.01);
+            depth.updateBid(price, 0);
+        }
+        
+        assertEquals(500, depth.getBids().size());
+        assertEquals(500, depth.getBidLevels().size());
     }
 }
