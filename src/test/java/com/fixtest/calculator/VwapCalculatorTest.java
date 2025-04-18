@@ -1,7 +1,7 @@
 package com.fixtest.calculator;
 
 import com.fixtest.calculator.impl.VwapCalculator;
-import com.fixtest.calculator.impl.VwapTwoWayPrice;
+import com.fixtest.calculator.impl.MutableVwapTwoWayPrice;
 import com.fixtest.model.Instrument;
 import com.fixtest.model.Market;
 import com.fixtest.model.State;
@@ -121,7 +121,7 @@ public class VwapCalculatorTest {
     private TwoWayPrice createTwoWayPrice(Instrument instrument, State state, 
                                          double bidPrice, double offerPrice, 
                                          double bidAmount, double offerAmount) {
-        return new VwapTwoWayPrice(instrument, state, bidPrice, offerPrice, bidAmount, offerAmount);
+        return new MutableVwapTwoWayPrice(instrument).update(state, bidPrice, offerPrice, bidAmount, offerAmount);
     }
     
     private MarketUpdate createMarketUpdate(Market market, TwoWayPrice price) {

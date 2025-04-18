@@ -23,13 +23,21 @@ import java.util.Map;
  */
 public class VwapCalculator implements Calculator {
     
-    private final Map<Instrument, VwapState> vwapData;
+    private final VwapState[] vwapStates;
+    private final VwapTwoWayPricePool pricePool;
     
     /**
-     * Constructs a new VwapCalculator with empty price data.
+     * Constructs a new VwapCalculator with pre-allocated state objects.
      */
     public VwapCalculator() {
-        this.vwapData = new EnumMap<>(Instrument.class);
+        int instrumentCount = Instrument.values().length;
+        this.vwapStates = new VwapState[instrumentCount];
+        
+        for (Instrument instrument : Instrument.values()) {
+            this.vwapStates[instrument.ordinal()] = new VwapState();
+        }
+        
+        this.pricePool = new VwapTwoWayPricePool();
     }
     
     @Override
@@ -46,7 +54,7 @@ public class VwapCalculator implements Calculator {
         Market market = marketUpdate.getMarket();
         Instrument instrument = price.getInstrument();
         
-        VwapState state = vwapData.computeIfAbsent(instrument, k -> new VwapState());
+        VwapState state = vwapStates[instrument.ordinal()];
         
         state.updatePrice(market, price);
         
@@ -58,8 +66,9 @@ public class VwapCalculator implements Calculator {
      * This improves efficiency by maintaining running totals instead of recalculating from scratch.
      */
     private static class VwapState {
-        // Map to store the latest price for each market
-        private final Map<Market, TwoWayPrice> latestPrices = new EnumMap<>(Market.class);
+        // Array to store the latest price for each market
+        private final TwoWayPrice[] latestPrices;
+        private final boolean[] marketHasPrice;
         
         private double totalBidAmount = 0.0;
         private double totalBidPriceAmount = 0.0;
@@ -70,6 +79,15 @@ public class VwapCalculator implements Calculator {
         private boolean hasIndicative = false;
         
         /**
+         * Constructs a new VwapState with arrays for price storage.
+         */
+        public VwapState() {
+            int marketCount = Market.values().length;
+            this.latestPrices = new TwoWayPrice[marketCount];
+            this.marketHasPrice = new boolean[marketCount];
+        }
+        
+        /**
          * Updates the state with a new price for a specific market.
          * Efficiently updates running totals by removing the old price's contribution
          * and adding the new price's contribution.
@@ -78,7 +96,8 @@ public class VwapCalculator implements Calculator {
          * @param newPrice the new price
          */
         public void updatePrice(Market market, TwoWayPrice newPrice) {
-            TwoWayPrice oldPrice = latestPrices.get(market);
+            int marketIndex = market.ordinal();
+            TwoWayPrice oldPrice = marketHasPrice[marketIndex] ? latestPrices[marketIndex] : null;
             
             if (newPrice.getState() == State.INDICATIVE) {
                 hasIndicative = true;
@@ -92,7 +111,8 @@ public class VwapCalculator implements Calculator {
             
             addToTotals(newPrice);
             
-            latestPrices.put(market, newPrice);
+            latestPrices[marketIndex] = newPrice;
+            marketHasPrice[marketIndex] = true;
         }
         
         /**
@@ -101,8 +121,8 @@ public class VwapCalculator implements Calculator {
          */
         private void recalculateIndicativeFlag() {
             hasIndicative = false;
-            for (TwoWayPrice price : latestPrices.values()) {
-                if (price.getState() == State.INDICATIVE) {
+            for (int i = 0; i < latestPrices.length; i++) {
+                if (marketHasPrice[i] && latestPrices[i].getState() == State.INDICATIVE) {
                     hasIndicative = true;
                     break;
                 }
@@ -158,7 +178,15 @@ public class VwapCalculator implements Calculator {
          * @return the calculated VWAP as a TwoWayPrice
          */
         public TwoWayPrice calculateVwap(Instrument instrument) {
-            if (latestPrices.isEmpty()) {
+            boolean hasAnyPrice = false;
+            for (boolean hasPrice : marketHasPrice) {
+                if (hasPrice) {
+                    hasAnyPrice = true;
+                    break;
+                }
+            }
+            
+            if (!hasAnyPrice) {
                 throw new IllegalStateException("No price data available for instrument: " + instrument);
             }
             
@@ -167,14 +195,8 @@ public class VwapCalculator implements Calculator {
             
             State state = hasIndicative ? State.INDICATIVE : State.FIRM;
             
-            return new VwapTwoWayPrice(
-                instrument,
-                state,
-                vwapBidPrice,
-                vwapOfferPrice,
-                totalBidAmount,
-                totalOfferAmount
-            );
+            return pricePool.getPrice(instrument)
+                    .update(state, vwapBidPrice, vwapOfferPrice, totalBidAmount, totalOfferAmount);
         }
     }
 }
