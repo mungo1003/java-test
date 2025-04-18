@@ -58,7 +58,7 @@ public class VwapCalculator implements Calculator {
         
         state.updatePrice(market, price);
         
-        return state.calculateVwap(instrument);
+        return state.calculateVwap(instrument, pricePool);
     }
     
     /**
@@ -177,7 +177,7 @@ public class VwapCalculator implements Calculator {
          * @param instrument the instrument
          * @return the calculated VWAP as a TwoWayPrice
          */
-        public TwoWayPrice calculateVwap(Instrument instrument) {
+        public TwoWayPrice calculateVwap(Instrument instrument, VwapTwoWayPricePool pricePool) {
             boolean hasAnyPrice = false;
             for (boolean hasPrice : marketHasPrice) {
                 if (hasPrice) {
